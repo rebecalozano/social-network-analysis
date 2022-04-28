@@ -1,0 +1,618 @@
+---
+title: "Social Network Analysis"
+author: "Rebeca Lozano"
+date: "27/04/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Loading in the data
+teens <- read.csv("https://raw.githubusercontent.com/stedy/Machine-Learning-with-R-datasets/master/snsdata.csv")
+summary(teens)
+```
+```{r}
+teens
+```
+
+```{r}
+str(teens)
+```
+
+```{r}
+# look at missing data for female variable
+table(teens$gender)
+table(teens$gender, useNA = "ifany")
+# look at missing data for age variable
+summary(teens$age)
+```
+
+```{r}
+Teens1 = teens
+# eliminate age outliers
+Teens1$age <- ifelse(teens$age >= 13 & teens$age < 20,
+                     teens$age, NA)
+
+summary(Teens1$age)
+```
+
+```{r}
+# reassign missing gender values to "unknown"
+Teens1$female <- ifelse(teens$gender == "F" &
+                         !is.na(teens$gender), 1, 0)
+Teens1$no_gender <- ifelse(is.na(teens$gender), 1, 0)
+# check our recoding work
+table(Teens1$gender, useNA = "ifany")
+table(Teens1$female, useNA = "ifany")
+table(Teens1$no_gender, useNA = "ifany")
+```
+
+```{r}
+# finding the mean age by cohort
+mean(Teens1$age) # doesn't work
+mean(Teens1$age, na.rm = TRUE) # works
+
+# age by cohort
+aggregate(data = Teens1, age ~ gradyear, mean, na.rm = TRUE)
+
+# create a vector with the average age for each gradyear, repeated by person
+ave_age <- ave(Teens1$age, Teens1$gradyear,
+                 FUN = function(x) mean(x, na.rm = TRUE))
+
+
+Teens1$age <- ifelse(is.na(Teens1$age), ave_age, Teens1$age)
+
+# check the summary results to ensure missing values are eliminated
+summary(Teens1$age)
+```
+
+```{r}
+## 1. Training a model on the data ----
+interests <- Teens1[5:40]
+interests_z <- as.data.frame(lapply(interests, scale))
+```
+
+
+```{r}
+cluster2 = matrix(0, nrow=30000, ncol=500)
+cluster3 = matrix(0, nrow=30000, ncol=500)
+cluster4 = matrix(0, nrow=30000, ncol=500)
+cluster5 = matrix(0, nrow=30000, ncol=500)
+cluster6 = matrix(0, nrow=30000, ncol=500)
+cluster7 = matrix(0, nrow=30000, ncol=500)
+cluster8 = matrix(0, nrow=30000, ncol=500)
+cluster9 = matrix(0, nrow=30000, ncol=500)
+cluster10 = matrix(0, nrow=30000, ncol=500)
+cluster11 = matrix(0, nrow=30000, ncol=500)
+cluster12 = matrix(0, nrow=30000, ncol=500)
+cluster13 = matrix(0, nrow=30000, ncol=500)
+cluster14 = matrix(0, nrow=30000, ncol=500)
+cluster15 = matrix(0, nrow=30000, ncol=500)
+
+
+SSQ2 = matrix(0, nrow=1, ncol=500)
+SSQ3 = matrix(0, nrow=1, ncol=500)
+SSQ4 = matrix(0, nrow=1, ncol=500)
+SSQ5 = matrix(0, nrow=1, ncol=500)
+SSQ6 = matrix(0, nrow=1, ncol=500)
+SSQ7 = matrix(0, nrow=1, ncol=500)
+SSQ8 = matrix(0, nrow=1, ncol=500)
+SSQ9 = matrix(0, nrow=1, ncol=500)
+SSQ10 = matrix(0, nrow=1, ncol=500)
+SSQ11 = matrix(0, nrow=1, ncol=500)
+SSQ12 = matrix(0, nrow=1, ncol=500)
+SSQ13 = matrix(0, nrow=1, ncol=500)
+SSQ14 = matrix(0, nrow=1, ncol=500)
+SSQ15 = matrix(0, nrow=1, ncol=500)
+
+```
+
+## Attempt at Parellization
+```{r}
+# 
+# list.of.packages <- c(
+#   "foreach",
+#   "doParallel",
+#   "ranger",
+#   "palmerpenguins",
+#   "tidyverse",
+#   "kableExtra"
+#   )
+# 
+# new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+# 
+# if(length(new.packages) > 0){
+#   install.packages(new.packages, dep=TRUE)
+# }
+# 
+# #loading packages
+# for(package.i in list.of.packages){
+#   suppressPackageStartupMessages(
+#     library(
+#       package.i, 
+#       character.only = TRUE
+#       )
+#     )
+# }
+# 
+# parallel::detectCores()
+# 
+# n.cores <- parallel::detectCores() - 1
+# 
+# #create the cluster
+# my.cluster <- parallel::makeCluster(
+#   n.cores, 
+#   type = "PSOCK"
+#   )
+# 
+# #check cluster definition (optional)
+# print(my.cluster)
+# 
+# #register it to be used by %dopar%
+# doParallel::registerDoParallel(cl = my.cluster)
+# 
+# #check if it is registered (optional)
+# foreach::getDoParRegistered()
+# 
+# foreach::getDoParWorkers()
+# 
+# x <- foreach(
+#   i = 1:10, 
+#   .combine = 'c'
+# ) %dopar% {
+#     sqrt(i)
+#   }
+# x
+# 
+
+#parallel::stopCluster(cl = my.cluster)
+```
+
+```{r}
+#Seco = function(k){
+#  cluster = matrix(0, nrow=30000, ncol=500)
+#  SSQ = matrix(0, nrow=1, ncol=500)
+#  for (i in 1:500){
+#    x = kmeans(interests_z, k)
+#    cluster[,i] = x$cluster
+#    SSQ[,i] = x$betweenss
+#  }
+#  SSQ = t(SSQ)
+#  s = data.frame(SSQ)
+#  s$value = seq(1,500,1)
+#  s = s[order(s[,1],decreasing = TRUE),]
+#  t = s[1:50,]
+#  c = cluster[,t$value]
+#  cv = matrix(0,nrow = 50, ncol = 50)
+#  for (i in 1:50){
+#    for (j in 1:50){
+#      cv2[i,j] = cramerV(x = c2[,i], y = c2[,j])
+#    }
+#  }
+#  m = cv; diag(m) = NA
+#  MCV = rowMedians(m, na.rm = TRUE)
+#  DF = data.frame(t, MCV, names = c("SSQ", "CramersV"))
+#}
+```
+
+```{r}
+#foreach(i = 2:15, .combine = "rbind")%dopar%{
+#  Seco = Seco(i)$DF
+#  id = seq(i,i,length.out = length(Seco))
+#  ans = cbind(Seco$DF,id)
+#  
+#  return(ans)
+#}
+```
+
+
+```{r}
+for (i in 1:500){
+  x = kmeans(interests_z, 2)
+  cluster2[,i] = x$cluster
+  SSQ2[,i] = x$betweenss
+  
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 3)
+  cluster3[,i] = x$cluster
+  SSQ3[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 4)
+  cluster4[,i] = x$cluster
+  SSQ4[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 5)
+  cluster5[,i] = x$cluster
+  SSQ5[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 6)
+  cluster6[,i] = x$cluster
+  SSQ6[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 7)
+  cluster7[,i] = x$cluster
+  SSQ7[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 8)
+  cluster8[,i] = x$cluster
+  SSQ8[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 9)
+  cluster9[,i] = x$cluster
+  SSQ9[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 10)
+  cluster10[,i] = x$cluster
+  SSQ10[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 11)
+  cluster11[,i] = x$cluster
+  SSQ11[,i] = x$betweenss
+}
+
+for (i in 1:500){
+  x = kmeans(interests_z, 12)
+  cluster12[,i] = x$cluster
+  SSQ12[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 13)
+  cluster13[,i] = x$cluster
+  SSQ13[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 14)
+  cluster14[,i] = x$cluster
+  SSQ14[,i] = x$betweenss
+}
+
+
+for (i in 1:500){
+  x = kmeans(interests_z, 15)
+  cluster15[,i] = x$cluster
+  SSQ15[,i] = x$betweenss
+}
+
+
+```
+
+
+```{r}
+SSQ2 = t(SSQ2)
+SSQ3 = t(SSQ3)
+SSQ4 = t(SSQ4)
+SSQ5 = t(SSQ5)
+SSQ6 = t(SSQ6)
+SSQ7 = t(SSQ7)
+SSQ8 = t(SSQ8)
+SSQ9 = t(SSQ9)
+SSQ10 = t(SSQ10)
+SSQ11 = t(SSQ11)
+SSQ12 = t(SSQ12)
+SSQ13 = t(SSQ13)
+SSQ14 = t(SSQ14)
+SSQ15 = t(SSQ15)
+
+```
+
+```{r}
+s2 = data.frame(SSQ2)
+s2$value = seq(1,500,1)
+s2 = s2[order(s2[,1],decreasing = TRUE),]
+
+s3 = data.frame(SSQ3)
+s3$value = seq(1,500,1)
+s3 = s3[order(s3[,1],decreasing = TRUE),]
+
+s4 = data.frame(SSQ4)
+s4$value = seq(1,500,1)
+s4 = s4[order(s4[,1],decreasing = TRUE),]
+
+s5 = data.frame(SSQ5)
+s5$value = seq(1,500,1)
+s5 = s5[order(s5[,1],decreasing = TRUE),]
+
+s6 = data.frame(SSQ6)
+s6$value = seq(1,500,1)
+s6 = s6[order(s6[,1],decreasing = TRUE),]
+
+s7 = data.frame(SSQ7)
+s7$value = seq(1,500,1)
+s7 = s7[order(s7[,1],decreasing = TRUE),]
+
+s8 = data.frame(SSQ8)
+s8$value = seq(1,500,1)
+s8 = s8[order(s8[,1],decreasing = TRUE),]
+
+s9 = data.frame(SSQ9)
+s9$value = seq(1,500,1)
+s9 = s9[order(s9[,1],decreasing = TRUE),]
+
+s10 = data.frame(SSQ10)
+s10$value = seq(1,500,1)
+s10 = s10[order(s10[,1],decreasing = TRUE),]
+
+s11 = data.frame(SSQ11)
+s11$value = seq(1,500,1)
+s11 = s11[order(s11[,1],decreasing = TRUE),]
+
+s12 = data.frame(SSQ12)
+s12$value = seq(1,500,1)
+s12 = s12[order(s12[,1],decreasing = TRUE),]
+
+s13 = data.frame(SSQ13)
+s13$value = seq(1,500,1)
+s13 = s13[order(s13[,1],decreasing = TRUE),]
+
+s14 = data.frame(SSQ14)
+s14$value = seq(1,500,1)
+s14 = s14[order(s14[,1],decreasing = TRUE),]
+
+s15 = data.frame(SSQ15)
+s15$value = seq(1,500,1)
+s15 = s15[order(s15[,1],decreasing = TRUE),]
+
+```
+
+
+```{r}
+
+t2 = s2[1:50,]
+t3 = s3[1:50,]
+t4 = s4[1:50,]
+t5 = s5[1:50,]
+t6 = s6[1:50,]
+t7 = s7[1:50,]
+t8 = s8[1:50,]
+t9 = s9[1:50,]
+t10 = s10[1:50,]
+t11 = s11[1:50,]
+t12 = s12[1:50,]
+t13 = s13[1:50,]
+t14 = s14[1:50,]
+t15 = s15[1:50,]
+
+```
+
+
+```{r}
+c2 = cluster2[,t2$value]
+c3 = cluster3[,t3$value]
+c4 = cluster4[,t4$value]
+c5 = cluster5[,t5$value]
+c6 = cluster6[,t6$value]
+c7 = cluster7[,t7$value]
+c8 = cluster8[,t8$value]
+c9 = cluster9[,t9$value]
+c10 = cluster10[,t10$value]
+c11 = cluster11[,t11$value]
+c12 = cluster12[,t12$value]
+c13 = cluster13[,t13$value]
+c14 = cluster14[,t14$value]
+c15 = cluster15[,t15$value]
+
+```
+
+
+```{r}
+library(ggpubr)
+library(ggplot2)
+library(factoextra)
+library(rcompanion)
+
+#Individual median cramerVs
+cv2 = matrix(0,nrow = 50, ncol = 50)
+cv3 = matrix(0,nrow = 50, ncol = 50)
+cv4 = matrix(0,nrow = 50, ncol = 50)
+cv5 = matrix(0,nrow = 50, ncol = 50)
+cv6 = matrix(0,nrow = 50, ncol = 50)
+cv7 = matrix(0,nrow = 50, ncol = 50)
+cv8 = matrix(0,nrow = 50, ncol = 50)
+cv9 = matrix(0,nrow = 50, ncol = 50)
+cv10 = matrix(0,nrow = 50, ncol = 50)
+cv11 = matrix(0,nrow = 50, ncol = 50)
+cv12 = matrix(0,nrow = 50, ncol = 50)
+cv13 = matrix(0,nrow = 50, ncol = 50)
+cv14 = matrix(0,nrow = 50, ncol = 50)
+cv15 = matrix(0,nrow = 50, ncol = 50)
+```
+```{r}
+for (i in 1:50){
+  for (j in 1:50){
+    cv2[i,j] = cramerV(x = c2[,i], y = c2[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv3[i,j] = cramerV(x = c3[,i], y = c3[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv4[i,j] = cramerV(x = c4[,i], y = c4[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv5[i,j] = cramerV(x = c5[,i], y = c5[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv6[i,j] = cramerV(x = c6[,i], y = c6[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv7[i,j] = cramerV(x = c7[,i], y = c7[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv8[i,j] = cramerV(x = c8[,i], y = c8[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv9[i,j] = cramerV(x = c9[,i], y = c9[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv10[i,j] = cramerV(x = c10[,i], y = c10[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv11[i,j] = cramerV(x = c11[,i], y = c11[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv12[i,j] = cramerV(x = c12[,i], y = c12[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv13[i,j] = cramerV(x = c13[,i], y = c13[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv14[i,j] = cramerV(x = c14[,i], y = c14[,j])
+  }
+}
+
+for (i in 1:50){
+  for (j in 1:50){
+    cv15[i,j] = cramerV(x = c15[,i], y = c15[,j])
+  }
+}
+
+```
+
+```{r}
+library(matrixStats)
+m2 = cv2; diag(m2) = NA
+m3 = cv3; diag(m3) = NA
+m4 = cv4; diag(m4) = NA
+m5 = cv5; diag(m5) = NA
+m6 = cv6; diag(m6) = NA
+m7 = cv7; diag(m7) = NA
+m8 = cv8; diag(m8) = NA
+m9 = cv9; diag(m9) = NA
+m10 = cv10; diag(m10) = NA
+m11 = cv11; diag(m11) = NA
+m12 = cv12; diag(m12) = NA
+m13 = cv13; diag(m13) = NA
+m14 = cv14; diag(m14) = NA
+m15 = cv15; diag(m15) = NA
+```
+```{r}
+MCV2 = rowMedians(m2, na.rm = TRUE)
+MCV3 = rowMedians(m3, na.rm = TRUE)
+MCV4 = rowMedians(m4, na.rm = TRUE)
+MCV5 = rowMedians(m5, na.rm = TRUE)
+MCV6 = rowMedians(m6, na.rm = TRUE)
+MCV7 = rowMedians(m7, na.rm = TRUE)
+MCV8 = rowMedians(m8, na.rm = TRUE)
+MCV9 = rowMedians(m9, na.rm = TRUE)
+MCV10 = rowMedians(m10, na.rm = TRUE)
+MCV11 = rowMedians(m11, na.rm = TRUE)
+MCV12 = rowMedians(m12, na.rm = TRUE)
+MCV13 = rowMedians(m13, na.rm = TRUE)
+MCV14 = rowMedians(m14, na.rm = TRUE)
+MCV15 = rowMedians(m15, na.rm = TRUE)
+```
+
+```{r}
+CramersV = c(MCV2, MCV3, MCV4, MCV5, MCV6, MCV7, MCV8, MCV9, MCV10, MCV11, MCV12, MCV13, MCV14, MCV15)
+SSQ = c(t2$SSQ2, t3$SSQ3, t4$SSQ4, t5$SSQ5, t6$SSQ6, t7$SSQ7, t8$SSQ8, t9$SSQ9, t10$SSQ10, t11$SSQ11, t12$SSQ12, t13$SSQ13, t14$SSQ14, t15$SSQ15)
+k = rep(c(2:15), each = 50)
+kf = as.factor(k)
+DF = data.frame(CramersV, SSQ, kf)
+DF
+```
+
+```{r}
+colour = rainbow(15)
+coloursr = rep(colour, each = 50)
+```
+
+```{r}
+library(ggplot2)
+ggplot(data = DF, aes(x = CramersV, y = SSQ, color = kf))+
+         geom_point(size = 2)+
+  labs(title = "SeCo Map",
+      y = "\u0394 SSQ",
+      x = "Median Internal Cram\u00E9rs' V",
+      color = "k"
+    )+
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlim(0,1)
+```
+
+```{r}
+plot(x = DF$CramersV, y = DF$SSQ, col=as.factor(coloursr), pch = c(2:15)[DF$kf],
+     xlab = "Median Internal Cram\u00E9rs' V",
+     ylab = "\u0394 SSQ",
+     main = "SeCo Map",
+     xlim = c(0.5,1),
+     cex = 0.75)
+legend("bottomleft", legend = c("2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"), col = as.factor(colour), pch = c(2:15), ncol = 14, cex = 0.75)
+```
+
+```{r}
+final = kmeans(interests_z, 8)
+final$betweenss
+```
+```{r}
+final$centers
+```
+
